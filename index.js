@@ -5,11 +5,10 @@ const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
 
 const filePath = `./20210131225139_addresses_with_keys.txt`
-const defaultGasPrice = 120000000000 //WEI 120Gwei
+const defaultGasPrice = 50000000000 //WEI 120Gwei
+// 1Inch 手续费28169Gas, * 50Gwei = 0.014ETH
 const baseUrl = 'https://api.metaswap.codefi.network/trades'
 const sourceAmount = 25000000000000000 // 0.025eth
-
-
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
@@ -69,6 +68,7 @@ async function  main(){
         _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
         _tx.gasLimit = web3.utils.toHex(_tx.gas)
         _tx.value = web3.utils.toHex(_tx.value)
+        
         delete _tx['gas']
 
         const tx = new Tx(_tx)
