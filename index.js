@@ -4,8 +4,8 @@ const axios = require('axios');
 const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
 
-const filePath = `./20210131225139_addresses_with_keys.txt`
-const defaultGasPrice = 50000000000 //WEI 120Gwei
+const filePath = `./20210201010133_addresses_with_keys.txt`
+const defaultGasPrice = 50000000000 //WEI 50Gwei
 // 1Inch 手续费28169Gas, * 50Gwei = 0.014ETH
 const baseUrl = 'https://api.metaswap.codefi.network/trades'
 const sourceAmount = 25000000000000000 // 0.025eth
@@ -63,7 +63,7 @@ async function  main(){
 
         const result  = await getData(address)
         const _tx = result[0].trade
-        console.log(_tx)
+        
         _tx.nonce = await web3.eth.getTransactionCount(address)
         _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
         _tx.gasLimit = web3.utils.toHex(_tx.gas)
@@ -79,7 +79,7 @@ async function  main(){
 
         await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
 
-        console.log(`购买Dai完成：${address}`)
+        console.log(`购买 Dai 完成：${address}，序号${i}`)
 
         }
     );
