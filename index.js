@@ -79,6 +79,8 @@ async function  main(){
 
         await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
 
+        console.log(`购买Dai完成：${address}`)
+
         }
     );
 }
