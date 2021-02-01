@@ -77,7 +77,7 @@ async function  main(){
         const tx = new Tx(_tx)
         tx.sign(Buffer.from(privateKey,'hex'))
         const serializedTx = tx.serialize()
-        //const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
         console.log(`发送 Token 完成: ${address}`)
     }
     )
