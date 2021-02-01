@@ -4,9 +4,9 @@ const axios = require('axios');
 const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
 
-const filePath = `./20210201010133_addresses_with_keys.txt`
-const defaultGasPrice = 50000000000 //WEI 50Gwei
-// 1Inch 手续费28169Gas, * 50Gwei = 0.014ETH
+const filePath = `./resend.txt`
+const defaultGasPrice = 65000000000 //WEI 50Gwei
+// 1Inch 手续费281649Gas, * 50Gwei = 0.014ETH
 const baseUrl = 'https://api.metaswap.codefi.network/trades'
 const sourceAmount = 25000000000000000 // 0.025eth
 
@@ -14,7 +14,7 @@ const sourceAmount = 25000000000000000 // 0.025eth
 const ETHAddress = '0x0000000000000000000000000000000000000000';
 const DaiAddress = '0x6b175474e89094c44da98b954eedeac495271d0f';
 
-const slipPage = 2;
+const slipPage = 5;
 
 const infura = `https://mainnet.infura.io/v3/b6f0f1c1788e452d83b17d1d2d3cf4e3`
 const web3 = new Web3(new Web3.providers.HttpProvider(infura))
@@ -54,37 +54,40 @@ async function getData(senderAddress){
 
 }
 
+async function asyncForEach(array, callback) {
+    for (let index = 0; index < array.length; index++) {
+      await callback(array[index], index, array)
+    }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function  main(){
 
     await processLineByLine();
-    
-    accountsWithKey.forEach( async ({address, privateKey}, i) => {
 
+    asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
+        // const balance = await web3.eth.getBalance(address)
+        // console.log(`${address}的余额为：${balance}`)
+        // } 
+        await sleep(1000)
         const result  = await getData(address)
         const _tx = result[0].trade
-        
         _tx.nonce = await web3.eth.getTransactionCount(address)
         _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
         _tx.gasLimit = web3.utils.toHex(_tx.gas)
         _tx.value = web3.utils.toHex(_tx.value)
-        
         delete _tx['gas']
-
         const tx = new Tx(_tx)
-
         tx.sign(Buffer.from(privateKey,'hex'))
-
         const serializedTx = tx.serialize()
-
-        await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-
+        const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
         console.log(`购买 Dai 完成：${address}，序号${i}`)
-
         }
-    );
+    )
 }
-
 
 main()
 
