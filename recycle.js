@@ -6,8 +6,8 @@ const contractAbi = require('./abi.json')
 
 
 const filePath = `./resend.txt`
-const defaultGasPrice = 65000000000 //WEI 50Gwei
-const defaultGasLimit = 10 * 10000 // 100000
+const defaultGasPrice = 165000000000 //WEI 165Gwei
+const defaultGasLimit = 6 * 10000 // 100000
 //代币地址 默认为Dai
 const tokenAddress = '0x6b175474e89094c44da98b954eedeac495271d0f'
 //接受者地址
