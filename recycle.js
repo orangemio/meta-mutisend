@@ -58,7 +58,7 @@ async function  main(){
         gasPrice:defaultGasPrice
     });
     asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
-        await sleep(2000)
+        await sleep(1000)
         const balance = await contract.methods.balanceOf(address).call();
         if(balance==0){
             console.log(`${address}检查到无Token余额,跳过`)
