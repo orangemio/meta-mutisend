@@ -6,13 +6,14 @@ const Tx = require('ethereumjs-tx');
 
 const filePath = `./20210830110928_addresses_with_keys.txt`
 const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
+const defaultGasLimit = 200000;
 // https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
 const baseUrl = 'https://api2.metaswap.codefi.network/networks/137/trades'
 const sourceAmount = 50000000000000000000 // 50 Maitic
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
-const USDTAddress = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
+const WETHAddress = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
 
 const slipPage = 5;
 
@@ -45,7 +46,7 @@ async function getData(senderAddress){
     
     // https://api.metaswap.codefi.network/trades?sourceToken=0x0000000000000000000000000000000000000000&destinationToken=0x6b175474e89094c44da98b954eedeac495271d0f&sourceAmount=20000000000000000&walletAddress=0x060bbae03EF52F1B47db247215Da0FB87FF4B2EB&slippage=2
 
-    const url = `${baseUrl}?sourceToken=${ETHAddress}&destinationToken=${USDTAddress}&walletAddress=${senderAddress}&sourceAmount=${sourceAmount}&slippage=${slipPage}`
+    const url = `${baseUrl}?sourceToken=${ETHAddress}&destinationToken=${WETHAddress}&walletAddress=${senderAddress}&sourceAmount=${sourceAmount}&slippage=${slipPage}`
 
     const result = await axios.get(url)
     
@@ -74,7 +75,7 @@ async function  main(){
         const _tx = result[0].trade
         _tx.nonce = await web3.eth.getTransactionCount(address)
         _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
-        _tx.gasLimit = web3.utils.toHex(_tx.gas)
+        _tx.gasLimit = web3.utils.toHex(defaultGasLimit)
         _tx.value = web3.utils.toHex(_tx.value)
         _tx.chainId = 137
         delete _tx['gas']
@@ -83,7 +84,7 @@ async function  main(){
         const serializedTx = tx.serialize()
         try{
             const hash = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-            console.log(`购买 USDT 完成：${address}，序号${i}`)
+            console.log(`购买 USDT 完成：${address}，序号${i}, Hash: ${hash.transactionHash}`)
         }catch(e){
             console.log(`Error: ${address}，序号${i}, ${e}`)
         }
