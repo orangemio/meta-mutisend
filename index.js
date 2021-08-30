@@ -98,7 +98,7 @@ async function  main(){
         privateKey,
         21000
         )
-
+        await sleep(20000);
         }
     )
 }
