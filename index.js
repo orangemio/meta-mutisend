@@ -85,7 +85,7 @@ async function  main(){
             //等待20S 区块确认
             await sleep(20000);
         }
-        const _tx_approve = await sendTranscation(result2[0].trade, address,privateKey);
+        const _tx_usdt_matic = await sendTranscation(result2[0].trade, address,privateKey);
         
         }
     )
