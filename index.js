@@ -10,16 +10,15 @@ const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
 const defaultGasLimit = 2000000;
 // https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
 const baseUrl = 'https://api2.metaswap.codefi.network/networks/137/trades'
-const sourceAmount = 50000000000000000000 // 50 Maitic
+const sourceAmount = 30000000000000000000 // 50 Maitic
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
 const USDTAddress = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f';
-const RouterAddress= '0x1a1ec25dc08e98e5e93f1104b5e5cdd298707d31';
 
 const slipPage = 5;
 
-const infura = `https://rpc-mainnet.matic.quiknode.pro`
+const infura = `https://rpc-mainnet.matic.network`
 const web3 = new Web3(new Web3.providers.HttpProvider(infura))
 
 
@@ -86,16 +85,29 @@ async function  main(){
             await sleep(20000);
         }
         const _tx_usdt_matic = await sendTranscation(result2[0].trade, address,privateKey);
-        
+        // 等待20S 区块确认
+        await sleep(20000);
+        const balance_need_to_send = await web3.eth.getBalance(address);
+        const _tx_send_next_account = await sendTranscation(
+            {
+                to: accountsWithKey[i+1].address,
+                value: balance_need_to_send - 22000 * defaultGasPrice,
+                data:'0x'
+        },
+        address,
+        privateKey,
+        21000
+        )
+
         }
     )
 }
 
-async function sendTranscation(data,address,privateKey){
+async function sendTranscation(data,address,privateKey,gasLimit = defaultGasLimit){
     const tx = data;
     tx.nonce = await web3.eth.getTransactionCount(address)
     tx.gasPrice = web3.utils.toHex(defaultGasPrice)
-    tx.gasLimit = web3.utils.toHex(defaultGasLimit)
+    tx.gasLimit = web3.utils.toHex(gasLimit)
     tx.value = web3.utils.toHex(tx.value)
     tx.chainId = 137
     const _tx = new Tx(tx);
