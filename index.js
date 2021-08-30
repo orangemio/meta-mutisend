@@ -76,17 +76,17 @@ async function  main(){
         _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
         _tx.gasLimit = web3.utils.toHex(_tx.gas)
         _tx.value = web3.utils.toHex(_tx.value)
+        _tx.chainId = 137
         delete _tx['gas']
         const tx = new Tx(_tx)
         tx.sign(Buffer.from(privateKey,'hex'))
         const serializedTx = tx.serialize()
         try{
-            const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-            console.log(`购买 USDT 完成：${address}，序号${i}, hash${hash}`)
+            const hash = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+            console.log(`购买 USDT 完成：${address}，序号${i}`)
         }catch(e){
-            console.log(`Error: ${address}，序号${i}, hash${hash}, ${e}`)
+            console.log(`Error: ${address}，序号${i}, ${e}`)
         }
-
         }
     )
 }
