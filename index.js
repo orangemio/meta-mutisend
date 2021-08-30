@@ -3,17 +3,19 @@ const readline = require('readline');
 const axios = require('axios');
 const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
-
+const abi = require('./abi.json')
+const { ethers } = require("ethers");
 const filePath = `./20210830110928_addresses_with_keys.txt`
 const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
-const defaultGasLimit = 200000;
+const defaultGasLimit = 2000000;
 // https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
 const baseUrl = 'https://api2.metaswap.codefi.network/networks/137/trades'
 const sourceAmount = 50000000000000000000 // 50 Maitic
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
-const WETHAddress = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
+const USDTAddress = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f';
+const RouterAddress= '0x1a1ec25dc08e98e5e93f1104b5e5cdd298707d31';
 
 const slipPage = 5;
 
@@ -42,11 +44,11 @@ async function processLineByLine() {
     }
 }
 
-async function getData(senderAddress){
+async function getData(senderAddress, senderToken = ETHAddress, recieveToken = USDTAddress, Amount = sourceAmount){
     
     // https://api.metaswap.codefi.network/trades?sourceToken=0x0000000000000000000000000000000000000000&destinationToken=0x6b175474e89094c44da98b954eedeac495271d0f&sourceAmount=20000000000000000&walletAddress=0x060bbae03EF52F1B47db247215Da0FB87FF4B2EB&slippage=2
 
-    const url = `${baseUrl}?sourceToken=${ETHAddress}&destinationToken=${WETHAddress}&walletAddress=${senderAddress}&sourceAmount=${sourceAmount}&slippage=${slipPage}`
+    const url = `${baseUrl}?sourceToken=${senderToken}&destinationToken=${recieveToken}&walletAddress=${senderAddress}&sourceAmount=${Amount}&slippage=${slipPage}`
 
     const result = await axios.get(url)
     
@@ -72,24 +74,41 @@ async function  main(){
     asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
         await sleep(1000)
         const result  = await getData(address)
-        const _tx = result[0].trade
-        _tx.nonce = await web3.eth.getTransactionCount(address)
-        _tx.gasPrice = web3.utils.toHex(defaultGasPrice)
-        _tx.gasLimit = web3.utils.toHex(defaultGasLimit)
-        _tx.value = web3.utils.toHex(_tx.value)
-        _tx.chainId = 137
-        delete _tx['gas']
-        const tx = new Tx(_tx)
-        tx.sign(Buffer.from(privateKey,'hex'))
-        const serializedTx = tx.serialize()
-        try{
-            const hash = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-            console.log(`购买 USDT 完成：${address}，序号${i}, Hash: ${hash.transactionHash}`)
-        }catch(e){
-            console.log(`Error: ${address}，序号${i}, ${e}`)
+       const _tx_matic_usdt = await sendTranscation(result[0].trade,address,privateKey);
+        //等待20S 区块确认
+        await sleep(20000);
+        let usdt = new web3.eth.Contract(abi,USDTAddress);
+        let amount = await usdt.methods.balanceOf(address).call();
+        const result2  = await getData(address,USDTAddress,ETHAddress,amount);
+        if(result2[0].approvalNeeded){
+            const _tx_approve = await sendTranscation(result2[0].approvalNeeded,address,privateKey);
+            //等待20S 区块确认
+            await sleep(20000);
         }
+        const _tx_approve = await sendTranscation(result2[0].trade, address,privateKey);
+        
         }
     )
+}
+
+async function sendTranscation(data,address,privateKey){
+    const tx = data;
+    tx.nonce = await web3.eth.getTransactionCount(address)
+    tx.gasPrice = web3.utils.toHex(defaultGasPrice)
+    tx.gasLimit = web3.utils.toHex(defaultGasLimit)
+    tx.value = web3.utils.toHex(tx.value)
+    tx.chainId = 137
+    const _tx = new Tx(tx);
+    _tx.sign(Buffer.from(privateKey,'hex'))
+    const serializedTx = _tx.serialize()
+
+    try{
+        const hash = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        console.log(`交易完成：${address}, Hash: ${hash.transactionHash}`)
+    }catch(e){
+        console.log(`Error: ${address}, ${e}`)
+    }
+
 }
 
 main()
