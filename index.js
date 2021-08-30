@@ -4,19 +4,19 @@ const axios = require('axios');
 const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
 
-const filePath = `./resend.txt`
-const defaultGasPrice = 65000000000 //WEI 50Gwei
-// 1Inch 手续费281649Gas, * 50Gwei = 0.014ETH
-const baseUrl = 'https://api.metaswap.codefi.network/trades'
-const sourceAmount = 25000000000000000 // 0.025eth
+const filePath = `./20210830110928_addresses_with_keys.txt`
+const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
+// https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
+const baseUrl = 'https://api2.metaswap.codefi.network/networks/137/trades'
+const sourceAmount = 50000000000000000000 // 50 Maitic
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
-const DaiAddress = '0x6b175474e89094c44da98b954eedeac495271d0f';
+const USDTAddress = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
 
 const slipPage = 5;
 
-const infura = `https://mainnet.infura.io/v3/b6f0f1c1788e452d83b17d1d2d3cf4e3`
+const infura = `https://rpc-mainnet.matic.quiknode.pro`
 const web3 = new Web3(new Web3.providers.HttpProvider(infura))
 
 
@@ -45,7 +45,7 @@ async function getData(senderAddress){
     
     // https://api.metaswap.codefi.network/trades?sourceToken=0x0000000000000000000000000000000000000000&destinationToken=0x6b175474e89094c44da98b954eedeac495271d0f&sourceAmount=20000000000000000&walletAddress=0x060bbae03EF52F1B47db247215Da0FB87FF4B2EB&slippage=2
 
-    const url = `${baseUrl}?sourceToken=${ETHAddress}&destinationToken=${DaiAddress}&walletAddress=${senderAddress}&sourceAmount=${sourceAmount}&slippage=${slipPage}`
+    const url = `${baseUrl}?sourceToken=${ETHAddress}&destinationToken=${USDTAddress}&walletAddress=${senderAddress}&sourceAmount=${sourceAmount}&slippage=${slipPage}`
 
     const result = await axios.get(url)
     
@@ -69,9 +69,6 @@ async function  main(){
     await processLineByLine();
 
     asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
-        // const balance = await web3.eth.getBalance(address)
-        // console.log(`${address}的余额为：${balance}`)
-        // } 
         await sleep(1000)
         const result  = await getData(address)
         const _tx = result[0].trade
@@ -83,8 +80,13 @@ async function  main(){
         const tx = new Tx(_tx)
         tx.sign(Buffer.from(privateKey,'hex'))
         const serializedTx = tx.serialize()
-        const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-        console.log(`购买 Dai 完成：${address}，序号${i}`)
+        try{
+            const hash = web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+            console.log(`购买 USDT 完成：${address}，序号${i}, hash${hash}`)
+        }catch(e){
+            console.log(`Error: ${address}，序号${i}, hash${hash}, ${e}`)
+        }
+
         }
     )
 }
