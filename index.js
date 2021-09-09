@@ -3,9 +3,9 @@ const readline = require('readline');
 const axios = require('axios');
 const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
-const abi = require('./abi.json')
-const { ethers } = require("ethers");
-const filePath = `./20210830110928_addresses_with_keys.txt`
+const abi = require('./abi.json');
+const { reject } = require('lodash');
+const filePath = `./20210909124935_addresses_with_keys.txt`
 const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
 const defaultGasLimit = 2000000;
 // https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
@@ -73,17 +73,25 @@ async function  main(){
     asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
         await sleep(1000)
         const result  = await getData(address)
+        console.log(`Matic -> USDT: ${address}`)
        const _tx_matic_usdt = await sendTranscation(result[0].trade,address,privateKey);
         //等待20S 区块确认
         await sleep(20000);
         let usdt = new web3.eth.Contract(abi,USDTAddress);
         let amount = await usdt.methods.balanceOf(address).call();
+        while(amount == 0){
+            amount = await usdt.methods.balanceOf(address).call();
+            console.log(`当前地址无USDT余额: ${address}, 可能上笔交易未完成, 等待20S`)
+            await sleep(20000);
+        }
         const result2  = await getData(address,USDTAddress,ETHAddress,amount);
         if(result2[0].approvalNeeded){
+            console.log(`USDT授权: ${address}`)
             const _tx_approve = await sendTranscation(result2[0].approvalNeeded,address,privateKey);
             //等待20S 区块确认
             await sleep(20000);
         }
+        console.log(`USDT -> Matic: ${address}`)
         const _tx_usdt_matic = await sendTranscation(result2[0].trade, address,privateKey);
         // 等待20S 区块确认
         await sleep(20000);
@@ -113,10 +121,18 @@ async function sendTranscation(data,address,privateKey,gasLimit = defaultGasLimi
     const _tx = new Tx(tx);
     _tx.sign(Buffer.from(privateKey,'hex'))
     const serializedTx = _tx.serialize()
-
     try{
-        const hash = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-        console.log(`交易完成：${address}, Hash: ${hash.transactionHash}`)
+        web3.eth.sendSignedTransaction(`0x${serializedTx.toString('hex')}`, async function(error, transactionHash){
+            reject(error);
+            let transactionReceipt = null
+            while (transactionReceipt == null) { // Waiting expectedBlockTime until the transaction is mined
+                transactionReceipt = await web3.eth.getTransactionReceipt(transactionHash);
+                console.log(`交易未确认: ${address}, 等待20S`);
+                await sleep(20000);
+            }
+            console.log(`交易完成:${address}, Hash: ${transactionHash}`)
+            return
+        })
     }catch(e){
         console.log(`Error: ${address}, ${e}`)
     }
