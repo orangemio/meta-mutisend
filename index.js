@@ -5,18 +5,18 @@ const Web3 = require("web3")
 const Tx = require('ethereumjs-tx');
 const abi = require('./abi.json');
 const { reject } = require('lodash');
-const filePath = `./20210909124935_addresses_with_keys.txt`
-const defaultGasPrice = 1500000000 //WEI 1.5 Gwei
+const filePath = `./hanhan_2021-09-27_can_edit.txt`
+const defaultGasPrice = 15000000000 //WEI 15 Gwei
 const defaultGasLimit = 2000000;
 // https://api2.metaswap.codefi.network/networks/137/trades?destinationToken=0x0000000000000000000000000000000000000000&sourceToken=0x2791bca1f2de4661ed88a30c99a7a9449aa84174&sourceAmount=3786230&slippage=3&timeout=10000&walletAddress=0x060bbae03ef52f1b47db247215da0fb87ff4b2eb
 const baseUrl = 'https://api2.metaswap.codefi.network/networks/137/trades'
-const sourceAmount = 30000000000000000000 // 50 Maitic
+const sourceAmount = 100000000000000000000 // 100 Maitic
 
 
 const ETHAddress = '0x0000000000000000000000000000000000000000';
 const USDTAddress = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f';
 
-const slipPage = 5;
+const slipPage = 15;
 
 const infura = `https://rpc-mainnet.matic.network`
 const web3 = new Web3(new Web3.providers.HttpProvider(infura))
@@ -48,11 +48,22 @@ async function getData(senderAddress, senderToken = ETHAddress, recieveToken = U
     // https://api.metaswap.codefi.network/trades?sourceToken=0x0000000000000000000000000000000000000000&destinationToken=0x6b175474e89094c44da98b954eedeac495271d0f&sourceAmount=20000000000000000&walletAddress=0x060bbae03EF52F1B47db247215Da0FB87FF4B2EB&slippage=2
 
     const url = `${baseUrl}?sourceToken=${senderToken}&destinationToken=${recieveToken}&walletAddress=${senderAddress}&sourceAmount=${Amount}&slippage=${slipPage}`
-
-    const result = await axios.get(url)
-    
+    let result = await axios.get(url)
     //指定1Inch的交易
-    return result.data.filter(v=>{return v.aggregator === 'oneInch'})
+
+    let data = result.data.filter(v=>{return v.aggregator === 'oneInch'})
+
+    // 获取不到数据
+    while(data[0].trade == null){
+        //等待20S
+        await sleep(20000);
+        console.log(`获取数据失败: 重新获取`)
+        result = await axios.get(url)
+        //指定1Inch的交易
+        data = result.data.filter(v=>{return v.aggregator === 'oneInch'})
+    }
+
+    return data
 
 }
 
@@ -71,7 +82,7 @@ async function  main(){
     await processLineByLine();
 
     asyncForEach(accountsWithKey, async ({address, privateKey}, i) => {
-        await sleep(1000)
+        await sleep(20000)
         const result  = await getData(address)
         console.log(`Matic -> USDT: ${address}`)
        const _tx_matic_usdt = await sendTranscation(result[0].trade,address,privateKey);
@@ -91,11 +102,20 @@ async function  main(){
             //等待20S 区块确认
             await sleep(20000);
         }
+        amount = await usdt.methods.balanceOf(address).call();
+        const result3  = await getData(address,USDTAddress,ETHAddress,amount);
         console.log(`USDT -> Matic: ${address}`)
-        const _tx_usdt_matic = await sendTranscation(result2[0].trade, address,privateKey);
+        const _tx_usdt_matic = await sendTranscation(result3[0].trade, address,privateKey);
         // 等待20S 区块确认
         await sleep(20000);
+        let USDT_amount = await usdt.methods.balanceOf(address).call();
+        while(USDT_amount >= 1000000){
+            USDT_amount = await usdt.methods.balanceOf(address).call();
+            console.log(`当前地址有USDT余额: ${address}, 可能上笔交易未完成, 等待20S`)
+            await sleep(20000);
+        }
         const balance_need_to_send = await web3.eth.getBalance(address);
+        console.log(`发送所有Matic: ${address} -> ${accountsWithKey[i+1].address}`)
         const _tx_send_next_account = await sendTranscation(
             {
                 to: accountsWithKey[i+1].address,
